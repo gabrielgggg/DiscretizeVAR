@@ -29,13 +29,9 @@ clean:
 	rm -f ./main ./*.o
 
 cleanresults:
-	rm -f results/*.tab results/*.bin
-
-cleanmlab:
-	rm -f results/*.mat results/*.fig
+	rm -f ./*.h5
 
 ccc:	clean cleanresults
 
 format:	
-	# clang-format --style=chromium -i ./*.cpp ./*.hpp
 	clang-format -i ./*.cpp ./*.hpp

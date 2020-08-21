@@ -38,8 +38,8 @@ vec discretizeNormal(vec grid, double mean, double sigma)
 }
 
 /*
- * Discretize Normal over uniformly spaced grid spanning +/- pmSigma standard
- * deviations.
+ * Discretize Normal over uniformly spaced grid 
+ * spanning +/- pmSigma standard deviations.
  */
 DiscreteRV discretizeNormal(double mean,
     double sigma,
@@ -65,10 +65,11 @@ const MvNormal VAR::conditional(vec& current) const
 
 void VAR::findStationary()
 {
+    // TODO Fail on invert of non-stationary case? Unit root?
     const mat eyeRho = eye(m_size, m_size) - m_rho;
     m_statMean = solve(eyeRho, m_intercept);
 
-    const mat tmp = inv(eyeRho); // TODO Fail on invert of non-stationary case?
+    const mat tmp = inv(eyeRho);
     m_statSigma = tmp * m_sigma * tmp.t();
 
     vec eigval;
@@ -135,7 +136,16 @@ MarkovChain::MarkovChain(const AR process, uword sz, double pmSd)
 const rowvec& MarkovChain::stationary()
 {
     if (m_stationary.is_empty()) {
-        // TODO
+        cx_vec eigval;
+        cx_mat eigvec;
+        eig_gen(eigval, eigvec, m_tran.t());
+
+        uword unitEigIx = (abs(abs(eigval) - 1.0)).index_min();
+
+        cout << " sss " << unitEigIx << endl;
+
+        m_stationary = abs(eigvec.col(unitEigIx)).t();
+        m_stationary = m_stationary / sum(m_stationary);
     }
 
     return m_stationary;
@@ -143,7 +153,9 @@ const rowvec& MarkovChain::stationary()
 
 void MarkovChain::save(std::string fname) const
 {
-    // TODO
+    m_support.save(hdf5_name(fname, "support", hdf5_opts::replace));
+    m_stationary.save(hdf5_name(fname, "stationary", hdf5_opts::replace));
+    m_tran.save(hdf5_name(fname, "transitions", hdf5_opts::replace));
 }
 
 /*
@@ -236,14 +248,12 @@ void DiscreteVAR::impl(bool trimGrids)
     cout << "Completed discretization." << endl;
 
     if (trimGrids) {
-        cx_vec eigval;
-        cx_mat eigvec;
-        eig_gen(eigval, eigvec, tran.t());
+        /*
+       * Based on Gordon 2020 wip.
+       */
+        rowvec probs = m_mc.stationary();
 
-        uword unitEigIx = (abs(abs(eigval) - 1.0)).index_min();
-
-        vec probs = abs(eigvec.col(unitEigIx));
-        probs = probs / sum(probs);
+        cout << " el " << probs.n_elem << endl;
 
         uvec removePoints;
         uword removeCount = 0;
@@ -264,23 +274,6 @@ void DiscreteVAR::impl(bool trimGrids)
         newTran.shed_cols(removePoints);
         for (uword fIx = 0; fIx < newFlatSize; ++fIx)
             newTran.row(fIx) = newTran.row(fIx) / sum(newTran.row(fIx));
-
-        /*
-        uword advIx = 0;
-        for (uword flatIx = 0; flatIx < m_flatSize; ++flatIx)
-            if (removePoints(flatIx) == 0) {
-                newGrids.row(advIx) = m_grids.row(flatIx);
-                rowvec remainingMass(newFlatSize);
-                uword advPrIx = 0;
-                for (uword flatPrIx = 0; flatPrIx < m_flatSize; ++flatPrIx)
-                    if (removePoints(flatPrIx) == 0) {
-                        remainingMass(advPrIx) = tran(flatIx, flatPrIx);
-                        advPrIx++;
-                    }
-                newTran.row(advIx) = remainingMass / sum(remainingMass);
-                advIx++;
-            }
-            */
 
         m_grids = newGrids;
         tran = newTran;
