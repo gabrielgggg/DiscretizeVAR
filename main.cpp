@@ -41,7 +41,7 @@ int main()
         return 1;
     }
 
-    DiscreteVAR myMCvar(myVarN, 5, true);
+    DiscreteVAR myMCvar(myVarN, 15, true);
     // myMCvar.print();
     myMCvar.save("myMCvar.h5");
 
