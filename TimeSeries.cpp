@@ -6,7 +6,6 @@
 #include <string>
 
 using namespace arma;
-using namespace std;
 
 namespace TimeSeries {
 
@@ -65,17 +64,30 @@ const MvNormal VAR::conditional(vec& current) const
 
 void VAR::findStationary()
 {
-    // TODO Fail on invert of non-stationary case? Unit root?
     const mat eyeRho = eye(m_size, m_size) - m_rho;
+    double theDet = det(eyeRho);
+
+    if (fabs(theDet) < TStol) {
+        cout << "Determinant " << det(eyeRho) << endl;
+        is_stationary = false;
+        m_statMean.reset();
+        m_statSigma.reset();
+        return;
+    } else
+        is_stationary = true;
+
     m_statMean = solve(eyeRho, m_intercept);
 
-    const mat tmp = inv(eyeRho);
-    m_statSigma = tmp * m_sigma * tmp.t();
-
-    vec eigval;
-    mat eigvec;
-    eig_sym(eigval, eigvec, m_statSigma);
-    is_stationary = eigval.min() >= 0.0;
+    mat v0 = m_sigma;
+    mat v1 = m_sigma;
+    v0.fill(0.0);
+    double err = 1.0;
+    while (err > TStol) {
+        v1 = m_rho * v0 * m_rho.t() + m_sigma;
+        err = abs(v1 - v0).max();
+        v0 = v1;
+    }
+    m_statSigma = v1;
 }
 
 vec& VAR::stationaryMean()
@@ -142,7 +154,7 @@ const rowvec& MarkovChain::stationary()
 
         uword unitEigIx = (abs(abs(eigval) - 1.0)).index_min();
 
-        cout << " sss " << unitEigIx << endl;
+        // cout << " sss " << unitEigIx << endl;
 
         m_stationary = abs(eigvec.col(unitEigIx)).t();
         m_stationary = m_stationary / sum(m_stationary);
@@ -252,9 +264,6 @@ void DiscreteVAR::impl(bool trimGrids)
        * Based on Gordon 2020 wip.
        */
         rowvec probs = m_mc.stationary();
-
-        cout << " el " << probs.n_elem << endl;
-
         uvec removePoints;
         uword removeCount = 0;
         for (uword flatIx = 0; flatIx < m_flatSize; ++flatIx)

@@ -1,51 +1,46 @@
-g++ -Ofast -fopenmp -pipe -flto -std=c++17 -Wall -pedantic -g -c TimeSeries.cpp
-g++ -Ofast -fopenmp -pipe -flto -std=c++17 -Wall -pedantic -g -o main *.o main.cpp -larmadillo
 Original VAR: Stationary
-Intercept:
+Intercept: 
         0
    0.2500
    1.0000
-Rho:
+Rho: 
    0.9000        0        0
         0   0.8000        0
         0        0        0
-Sigma:
+Sigma: 
    0.0009  -0.0001        0
   -0.0001   0.0006        0
         0        0   0.0100
-Stationary:
+Stationary: 
         0
    1.2500
    1.0000
-Stationary Sigma:
-   0.0900  -0.0063        0
-  -0.0063   0.0156        0
+Stationary Sigma: 
+   0.0047  -0.0004        0
+  -0.0004   0.0017        0
         0        0   0.0100
 
 Orthog VAR: Stationary
-Intercept:
+Intercept: 
    1.0000
    0.0901
    0.2332
-Rho:
+Rho: 
         0        0        0
         0   0.8870  -0.0336
         0  -0.0336   0.8130
-Sigma:
+Sigma: 
    0.0100        0        0
         0   0.0009        0
         0        0   0.0006
-Stationary:
+Stationary: 
    1.0000
    0.4507
    1.1659
-Stationary Sigma:
+Stationary Sigma: 
    0.0100        0        0
-        0   0.0845  -0.0204
-        0  -0.0204   0.0211
+        0   0.0046  -0.0007
+        0  -0.0007   0.0018
 Completed discretization.
- sss 0
- el 3375
-Removing 2870 points out of 3375.
+Removing 122 points out of 729.
 Done.
-

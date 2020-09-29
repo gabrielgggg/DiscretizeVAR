@@ -5,6 +5,8 @@ using namespace arma;
 
 namespace TimeSeries {
 
+constexpr double TStol = 1.0E-10;
+
 struct DiscreteRV {
     vec support;
     vec probabilities;
@@ -153,7 +155,7 @@ private:
     uword m_supportSize;
     uword m_size;
     uword m_flatSize;
-    const double pmSd = 3.0;
+    const double pmSd = 3.5;
     const double minPr = 1.0e-6;
 
     mat m_grids;

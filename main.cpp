@@ -4,13 +4,12 @@
 
 #include "TimeSeries.hpp"
 
-// using namespace std;
 using namespace arma;
 using namespace TimeSeries;
 
 int main()
 {
-    // example 3
+    // example 3d
     vec icept = { 0.0, 0.25, 1.0 };
     mat rho = {
         { 0.9, 0.0, 0.0 }, //
@@ -23,7 +22,7 @@ int main()
         { 0.0, 0.0, 0.01 }
     };
 
-    /*
+    /* example 2d
     vec icept = { 0.0, 0.25 };
     mat rho = {
         { 0.9, 0.0 }, //
@@ -41,7 +40,7 @@ int main()
         return 1;
     }
 
-    DiscreteVAR myMCvar(myVarN, 15, true);
+    DiscreteVAR myMCvar(myVarN, 9, true);
     // myMCvar.print();
     myMCvar.save("myMCvar.h5");
 
