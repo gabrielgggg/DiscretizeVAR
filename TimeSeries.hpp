@@ -6,7 +6,7 @@ using namespace arma;
 namespace TimeSeries {
 
 const double TStol = 1.0E-10;
-const double pmSd = 3.5;
+const double pmSd = 3.0;
 const double minPr = 1.0E-4;
 
 struct DiscreteRV {
@@ -119,7 +119,7 @@ class MarkovChain {
   {
     m_size = support.n_elem;
   }
-  MarkovChain(const AR process, const uword sz = 21, const double pmSd = 2.0);
+  MarkovChain(const AR process, const uword sz = 21, const double pmMCsd = pmSd);
 
   private:
   uword m_size;

@@ -1,3 +1,4 @@
+//define ARMA_ALLOW_FAKE_GCC
 #define ARMA_NO_DEBUG
 
 #include <armadillo>
@@ -139,11 +140,11 @@ void VAR::print()
 /*
  * Markov Chain
  */
-MarkovChain::MarkovChain(const AR process, const uword sz, const double pmSd)
+MarkovChain::MarkovChain(const AR process, const uword sz, const double pmMCsd)
 {
   double pMean = process.stationaryMean();
   double pSd = process.stationarySigma();
-  rowvec support = linspace<rowvec>(pMean - pmSd * pSd, pMean + pmSd * pSd, sz);
+  rowvec support = linspace<rowvec>(pMean - pmMCsd * pSd, pMean + pmMCsd * pSd, sz);
 
   mat transition(sz, sz);
   for (uword rIx = 0; rIx < sz; ++rIx) {
@@ -166,6 +167,18 @@ const rowvec& MarkovChain::stationary()
 
     m_stationary = abs(eigvec.col(unitEigIx)).t();
     m_stationary = m_stationary / sum(m_stationary);
+    /*
+    uword sz = this->size();
+    m_stationary.set_size(sz);
+    m_stationary.fill(1.0 / (0.0 + sz));
+    double err = 1.0;
+    vec tmp = m_stationary;
+    while (err > 1.0e-10) {
+      vec tmp = (m_stationary.t() * m_tran).t();
+      err = abs(tmp - m_stationary).max();
+      m_stationary = tmp;
+    }
+    */
   }
 
   return m_stationary;
@@ -218,9 +231,6 @@ void DiscreteVAR::impl(bool trimGrids)
   VAR orthog(Atilde, Btilde, diagDD);
   const vec uncondE = orthog.stationaryMean();
   const vec uncondV = orthog.stationarySigma().diag();
-
-  // cout << "Original VAR: " << (m_var.stationaryQ() ? "Stationary" : "Nonstationary") << endl;
-  // m_var.print();
 
   // Prepare logical grids
   for (uword vIx = 0; vIx < m_size; ++vIx) {
@@ -286,6 +296,7 @@ void DiscreteVAR::impl(bool trimGrids)
     mat newTran = tran;
     newTran.shed_rows(removePoints);
     newTran.shed_cols(removePoints);
+#pragma omp simd
     for (uword fIx = 0; fIx < newFlatSize; ++fIx)
       newTran.row(fIx) = newTran.row(fIx) / sum(newTran.row(fIx));
 
@@ -296,8 +307,9 @@ void DiscreteVAR::impl(bool trimGrids)
 
   // Finding midIx
   vec distances(m_flatSize);
+#pragma omp parallel for
   for (uword flatIx = 0; flatIx < m_flatSize; ++flatIx) {
-    const vec tmp = uncondE - m_grids.row(flatIx);
+    const vec tmp = uncondE - m_grids.row(flatIx).t();
     distances(flatIx) = sum(tmp % tmp);
   }
   m_midIx = distances.index_min();
