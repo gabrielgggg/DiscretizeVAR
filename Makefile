@@ -17,7 +17,7 @@ else
   $(error Unknown toolchain?)
 endif
 
-.PHONY: all clean
+.PHONY: all clean cleanresults ccc format
 
 all:	main.cpp TimeSeries.o
 	$(compiler) $(flags) $(fWarn) -o main *.o main.cpp ${libs}
