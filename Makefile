@@ -1,7 +1,7 @@
 #
 # "gnu" or "intel"
 #
-tools = gnu
+tools = intel
 
 ifeq ($(tools),gnu)
   compiler = g++
@@ -11,7 +11,7 @@ ifeq ($(tools),gnu)
 else ifeq ($(tools),intel)
   compiler = icpc
   flags = -O3 -ipo -parallel -align -march=native -mtune=native -mcpu=native -qopenmp
-  fWarn = -warn all
+  fWarn = -W
   libs = -larmadillo -mkl
 else
   $(error Unknown toolchain?)

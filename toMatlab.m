@@ -1,11 +1,11 @@
 clear;
 
 % Solution
-grids = h5read('myMCvar.h5', '/grids');
-transitions = h5read('myMCvar.h5', '/transitions');
-varIntercept = h5read('myMCvar.h5', '/varIntercept');
-varRho = h5read('myMCvar.h5', '/varRho');
-varSigma = h5read('myMCvar.h5', '/varSigma');
+grids = h5read('myMCvar.h5', '/DVAR/grids');
+transitions = h5read('myMCvar.h5', '/DVAR/transitions');
+varIntercept = h5read('myMCvar.h5', '/DVAR/varIntercept');
+varRho = h5read('myMCvar.h5', '/DVAR/varRho');
+varSigma = h5read('myMCvar.h5', '/DVAR/varSigma');
 
 sz = size(grids, 2);
 

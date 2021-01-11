@@ -1,6 +1,5 @@
-//define ARMA_ALLOW_FAKE_GCC
-#define ARMA_NO_DEBUG
-
+// define ARMA_NO_DEBUG
+#define ARMA_ALLOW_FAKE_GCC
 #include <armadillo>
 #include <cmath>
 #include <iostream>
@@ -296,7 +295,7 @@ void DiscreteVAR::impl(bool trimGrids)
     mat newTran = tran;
     newTran.shed_rows(removePoints);
     newTran.shed_cols(removePoints);
-#pragma omp simd
+#pragma omp parallel for
     for (uword fIx = 0; fIx < newFlatSize; ++fIx)
       newTran.row(fIx) = newTran.row(fIx) / sum(newTran.row(fIx));
 
