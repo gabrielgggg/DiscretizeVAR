@@ -28,9 +28,9 @@ vec discretizeNormal(vec grid, const double mean, const double sigma, bool cutTa
         return prs;
     }
 
-    for (uword ix = 1; ix < sz - 1; ++ix) {
+#pragma omp parallel for
+    for (uword ix = 1; ix < sz - 1; ++ix)
         prs(ix) = normcdf((grid(ix) + grid(ix + 1)) / 2.0, mean, sigma) - normcdf((grid(ix - 1) + grid(ix)) / 2.0, mean, sigma);
-    }
 
     if (cutTails) {
         const double stepOut = (grid(1) - grid(0)) / 2.0;
@@ -146,6 +146,7 @@ MarkovChain::MarkovChain(const AR process, const uword sz, const double pmMCsd)
     rowvec support = linspace<rowvec>(pMean - pmMCsd * pSd, pMean + pmMCsd * pSd, sz);
 
     mat transition(sz, sz);
+#pragma omp parallel for
     for (uword rIx = 0; rIx < sz; ++rIx) {
         double condMean = process.intercept() + process.rho() * support(rIx);
         vec condPrs = discretizeNormal(support.t(), condMean, process.sigma());
@@ -166,18 +167,6 @@ const rowvec& MarkovChain::stationary()
 
         m_stationary = abs(eigvec.col(unitEigIx)).t();
         m_stationary = m_stationary / sum(m_stationary);
-        /*
-    uword sz = this->size();
-    m_stationary.set_size(sz);
-    m_stationary.fill(1.0 / (0.0 + sz));
-    double err = 1.0;
-    vec tmp = m_stationary;
-    while (err > 1.0e-10) {
-      vec tmp = (m_stationary.t() * m_tran).t();
-      err = abs(tmp - m_stationary).max();
-      m_stationary = tmp;
-    }
-    */
     }
 
     return m_stationary;
@@ -230,7 +219,6 @@ void DiscreteVAR::impl(bool trimGrids, Method method)
         mat VV;
         svd(LL, DD, VV, GG);
 
-        // Unconditional expectation and covariance matrix
         Atilde = LL.t() * AA;
         Btilde = LL.t() * BB * LL;
         diagDD = diagmat(DD);
@@ -255,11 +243,13 @@ void DiscreteVAR::impl(bool trimGrids, Method method)
     const vec uncondV = orthog.stationarySigma().diag();
 
     // Prepare logical grids
+#pragma omp parallel for
     for (uword vIx = 0; vIx < m_size; ++vIx)
         m_orthogGrids(vIx) = linspace<vec>(uncondE(vIx) - pmSd * sqrt(uncondV(vIx)),
             uncondE(vIx) + pmSd * sqrt(uncondV(vIx)), m_supportSizes(vIx));
 
-    // Prepare flat grids
+        // Prepare flat grids
+#pragma omp parallel for
     for (uword flatIx = 0; flatIx < m_flatSize; ++flatIx) {
         uword tmp = flatIx;
         for (uword vIx = 0; vIx < m_size; ++vIx) {
@@ -281,6 +271,7 @@ void DiscreteVAR::impl(bool trimGrids, Method method)
         for (uword vIx = 0; vIx < m_size; ++vIx)
             condPrs(vIx) = discretizeNormal(m_orthogGrids(vIx), condMeans(vIx), condSd(vIx));
 
+#pragma omp parallel for
         for (uword flatPrIx = 0; flatPrIx < m_flatSize; ++flatPrIx) {
             double goPr = 1.0;
             for (uword vPrIx = 0; vPrIx < m_size; ++vPrIx) {
