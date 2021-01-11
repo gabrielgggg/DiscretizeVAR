@@ -10,8 +10,8 @@ ifeq ($(tools),gnu)
   libs = -larmadillo 
 else ifeq ($(tools),intel)
   compiler = icpc
-  flags = -O3 -ipo -parallel -align -march=native -mtune=native -mcpu=native -qopenmp
-  fWarn = -W
+  flags = -Ofast -ipo -parallel -align -march=native -mtune=native -mcpu=native -qopenmp -std=c++17
+  fWarn = -W -g -pedantic
   libs = -larmadillo -mkl
 else
   $(error Unknown toolchain?)
