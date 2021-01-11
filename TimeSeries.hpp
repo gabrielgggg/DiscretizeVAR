@@ -144,12 +144,22 @@ public:
     void save(std::string fname) const;
     void print() const;
 
-    enum Method { SVD,
-        Cholesky };
+    enum Method { //
+        SVD,
+        Cholesky
+    };
 
     DiscreteVAR(const VAR var, const uword supportSize, bool trimGrids = true, Method mm = Method::Cholesky)
         : m_var(var)
-        , m_supportSize(supportSize)
+    {
+        m_supportSizes.set_size(m_var.size());
+        m_supportSizes.fill(supportSize);
+        impl(trimGrids, mm);
+    }
+
+    DiscreteVAR(const VAR var, const uvec gridSizes, bool trimGrids = true, Method mm = Method::Cholesky)
+        : m_var(var)
+        , m_supportSizes(gridSizes)
     {
         impl(trimGrids, mm);
     }
@@ -158,12 +168,12 @@ private:
     VAR m_var;
     MarkovChain m_mc;
 
-    uword m_supportSize;
     uword m_size;
     uword m_flatSize;
     uword m_midIx;
 
     mat m_grids;
+    uvec m_supportSizes;
 
     void impl(bool trimGrids, Method mm);
 };

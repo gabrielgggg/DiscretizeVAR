@@ -206,7 +206,7 @@ void DiscreteVAR::impl(bool trimGrids, Method method)
 {
     // Sizing
     m_size = m_var.size();
-    m_flatSize = pow(m_supportSize, m_size);
+    m_flatSize = prod(m_supportSizes);
     m_grids.set_size(m_flatSize, m_size);
 
     umat m_map(m_flatSize, m_size);
@@ -239,11 +239,6 @@ void DiscreteVAR::impl(bool trimGrids, Method method)
     case Method::Cholesky: {
         LL = chol(GG, "lower");
         mat invLL = inv(LL);
-        LL.print("LL");
-        invLL.print("invLL");
-
-        mat tmp = LL * LL.t();
-        tmp.print("LL * LL'");
 
         Atilde = invLL * AA;
         Btilde = invLL * BB * LL;
@@ -260,19 +255,18 @@ void DiscreteVAR::impl(bool trimGrids, Method method)
     const vec uncondV = orthog.stationarySigma().diag();
 
     // Prepare logical grids
-    for (uword vIx = 0; vIx < m_size; ++vIx) {
+    for (uword vIx = 0; vIx < m_size; ++vIx)
         m_orthogGrids(vIx) = linspace<vec>(uncondE(vIx) - pmSd * sqrt(uncondV(vIx)),
-            uncondE(vIx) + pmSd * sqrt(uncondV(vIx)), m_supportSize);
-    }
+            uncondE(vIx) + pmSd * sqrt(uncondV(vIx)), m_supportSizes(vIx));
 
     // Prepare flat grids
     for (uword flatIx = 0; flatIx < m_flatSize; ++flatIx) {
         uword tmp = flatIx;
         for (uword vIx = 0; vIx < m_size; ++vIx) {
             const vec logical = m_orthogGrids(vIx);
-            m_map(flatIx, vIx) = tmp % m_supportSize;
+            m_map(flatIx, vIx) = tmp % m_supportSizes(vIx);
             m_grids(flatIx, vIx) = logical(m_map(flatIx, vIx));
-            tmp = tmp / m_supportSize;
+            tmp = tmp / m_supportSizes(vIx);
         }
     }
 
@@ -300,7 +294,6 @@ void DiscreteVAR::impl(bool trimGrids, Method method)
     // Adjust grids
     m_grids = (LL * m_grids.t()).t();
     cout << "Completed discretization." << endl;
-    m_grids.print();
 
     if (trimGrids) {
         /*
