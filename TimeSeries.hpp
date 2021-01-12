@@ -5,9 +5,9 @@ using namespace arma;
 
 namespace TimeSeries {
 
-const double TStol = 1.0E-10;
+const double TStol = 1.0E-12;
 const double pmSd = 3.0;
-const double minPr = 1.0E-4;
+const double minPr = 5.0E-5;
 
 struct DiscreteRV {
     vec support;
