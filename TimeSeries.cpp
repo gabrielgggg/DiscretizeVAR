@@ -161,7 +161,8 @@ const rowvec& MarkovChain::stationary()
     if (m_stationary.is_empty()) {
         cx_vec eigval;
         cx_mat eigvec;
-        eig_gen(eigval, eigvec, m_tran.t());
+        // eig_gen(eigval, eigvec, m_tran.t(), "balance");
+        eigs_gen(eigval, eigvec, sp_mat(m_tran.t()), 1, 1.0);
 
         uword unitEigIx = (abs(abs(eigval) - 1.0)).index_min();
 
@@ -291,6 +292,7 @@ void DiscreteVAR::impl(bool trimGrids, Method method)
      * Based on Gordon 2020 wip.
      */
         rowvec probs = m_mc.stationary();
+
         uvec removePoints;
         uword removeCount = 0;
         for (uword flatIx = 0; flatIx < m_flatSize; ++flatIx)

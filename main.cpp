@@ -44,7 +44,7 @@ int main()
 
     cout << "Start discretize..." << endl;
 
-    uvec gridSizes = { 11, 9, 7 };
+    uvec gridSizes = { 15, 15, 21 };
     DiscreteVAR myMCvar(myVarN, gridSizes, true, DiscreteVAR::Method::Cholesky);
     // myMCvar.print();
     myMCvar.save("myMCvar.h5");

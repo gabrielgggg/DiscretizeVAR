@@ -37,8 +37,12 @@ figure;
 % subplot(1, 2, 1);
 % scatter3(grids(:, 1), grids(:, 2), statdist); hold on;
 % scatter(path1, path2, 'rx');
-scatter3(precise1, precise2, precise3, 'rd'); hold on;
+scatter3(precise1, precise2, precise3, 'rd', 'filled'); hold on;
 scatter3(grids(:, 1), grids(:, 2), grids(:, 3), 'bo', 'filled'); 
+
+k = boundary(grids);
+trisurf(k,grids(:,1),grids(:,2),grids(:,3),'Facecolor','blue','FaceAlpha',0.15)
+
 % subplot(1, 2, 2);
 % scatter3(grids(:, 1), grids(:, 2), squeeze(transitions(5, :)));
 
