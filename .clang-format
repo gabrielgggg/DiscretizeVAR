@@ -1,6 +1,6 @@
 ---
 Language: Cpp
-BasedOnStyle: WebKit
+BasedOnStyle: Google
 SpaceAfterTemplateKeyword: false
 AlignEscapedNewlines: true
 AlignTrailingComments: true
