@@ -144,21 +144,20 @@ void VAR::print()
 MarkovChain::MarkovChain(const AR process, const uword sz, const double pmMCsd,
                          bool expSupport)
 {
+  m_size = sz;
   double pMean = process.stationaryMean();
   double pSd = process.stationarySigma();
-  rowvec support =
-      linspace<rowvec>(pMean - pmMCsd * pSd, pMean + pmMCsd * pSd, sz);
+  m_support = linspace<rowvec>(pMean - pmMCsd * pSd, pMean + pmMCsd * pSd, sz);
 
-  mat transition(sz, sz);
+  m_tran.set_size(sz, sz);
 #pragma omp parallel for
   for (uword rIx = 0; rIx < sz; ++rIx) {
-    double condMean = process.intercept() + process.rho() * support(rIx);
-    vec condPrs = discretizeNormal(support.t(), condMean, process.sigma());
-    transition.row(rIx) = condPrs.t();
+    double condMean = process.intercept() + process.rho() * m_support(rIx);
+    vec condPrs = discretizeNormal(m_support.t(), condMean, process.sigma());
+    m_tran.row(rIx) = condPrs.t();
   }
 
-  if (expSupport) support = exp(support);
-  MarkovChain(support, transition);
+  if (expSupport) m_support = exp(m_support);
 }
 
 const rowvec& MarkovChain::stationary()
@@ -185,6 +184,13 @@ void MarkovChain::save(const std::string fname) const
   m_tran.save(hdf5_name(fname, "MC/transitions", hdf5_opts::replace));
 }
 
+void MarkovChain::print() const
+{
+  m_support.print("print() : m_support");
+  m_stationary.print("print() : m_stationary");
+  m_tran.print("print() : m_tran");
+}
+
 /*
  * Discretized VAR(1) => MarkovChain
  */
@@ -205,11 +211,7 @@ void DiscreteVAR::impl(bool trimGrids, OrthoMethod method)
   m_size = m_var.size();
   m_flatSize = prod(m_supportSizes);
   m_grids.set_size(m_flatSize, m_size);
-
   umat m_map(m_flatSize, m_size);
-  field<vec> m_orthogGrids(m_size);
-
-  const mat mEye = eye(m_size, m_size);
 
   OrthogonalizedVAR ortho(m_var, method);
   mat LL = ortho.getSupportRotationMatrix();
@@ -223,6 +225,7 @@ void DiscreteVAR::impl(bool trimGrids, OrthoMethod method)
   const vec uncondV = orthog.stationarySigma().diag();
 
   // Prepare logical grids
+  field<vec> m_orthogGrids(m_size);
 #pragma omp parallel for
   for (uword vIx = 0; vIx < m_size; ++vIx)
     m_orthogGrids(vIx) = linspace<vec>(uncondE(vIx) - pmSd * sqrt(uncondV(vIx)),
@@ -328,15 +331,54 @@ void StochasticVolVAR::print() const {}
 
 void StochasticVolVAR::impl(bool trimGrids)
 {
-  MarkovChain volMC(m_vol, m_volGridSize, pmSd, true);
-  rowvec vols = volMC.support();
+  m_size = m_var.size();
+  uword justDimsSz = prod(m_supportSizes);
+  m_flatSize = justDimsSz * m_volGridSize;
+  m_grids.set_size(m_flatSize, 1 + m_size);
+  umat m_map(m_flatSize, 1 + m_size);
 
-  std::vector<DiscreteVAR> plainDVARs;
+  MarkovChain volMC(m_vol, m_volGridSize, pmSd, true);
+  const rowvec& vols = volMC.support();
+
+  OrthogonalizedVAR ortho(m_var);  // Default to Cholesky
+  mat rotationLL = ortho.getSupportRotationMatrix();
+  VAR orthog = ortho.getVAR();
+  const vec uncondE = orthog.stationaryMean();
+  const vec uncondV = orthog.stationarySigma().diag();
+
+  const mat Atilde = orthog.intercept();
+  const mat Btilde = orthog.rho();
+  const vec DD = orthog.sigma().diag();
+
+  // Prepare logical grids
+  field<vec> m_orthogGrids(m_size, m_volGridSize);
+#pragma omp parallel for collapse(2)
+  for (uword volIx = 0; volIx < m_volGridSize; ++volIx)
+    for (uword iIx = 0; iIx < m_size; ++iIx)
+      m_orthogGrids(iIx, volIx) =
+          linspace<vec>(uncondE(iIx) - pmSd * vols(volIx) * sqrt(uncondV(iIx)),
+                        uncondE(iIx) + pmSd * vols(volIx) * sqrt(uncondV(iIx)),
+                        m_supportSizes(iIx));
+
+  // Prepare flat grids
+#pragma omp parallel for collapse(2)
   for (uword volIx = 0; volIx < m_volGridSize; ++volIx) {
-    DiscreteVAR thisVAR(VAR(m_var.intercept(), m_var.rho(),
-                            vols(volIx) * vols(volIx) * m_var.sigma()),
-                        m_supportSizes, trimGrids);
-    plainDVARs.push_back(thisVAR);
+    for (uword flatIx = 0; flatIx < justDimsSz; ++flatIx) {
+      uword withV = justDimsSz * volIx + flatIx;
+
+      // cout << " Vol  " << volIx << " flat " << flatIx << " withV " << withV
+      // << endl;
+      m_map(withV, m_size) = volIx;
+      m_grids(withV, m_size) = vols(volIx);
+
+      uword tmp = flatIx;
+      for (uword iIx = 0; iIx < m_size; ++iIx) {
+        const vec logical = m_orthogGrids(iIx, volIx);
+        m_map(withV, iIx) = tmp % m_supportSizes(iIx);
+        m_grids(withV, iIx) = logical(m_map(withV, iIx));
+        tmp /= m_supportSizes(iIx);
+      }
+    }
   }
 }
 

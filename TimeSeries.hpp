@@ -161,12 +161,17 @@ class OrthogonalizedVAR {
 class MarkovChain {
  public:
   uword size() const { return m_size; }
+
   rowvec& support() { return m_support; }
   const rowvec& support() const { return m_support; }
+
   mat& transition() { return m_tran; }
   const mat& transition() const { return m_tran; }
+
   const rowvec& stationary();
+
   void save(std::string fname) const;
+  void print() const;
 
   MarkovChain() {}
   MarkovChain(rowvec support, mat transition)
@@ -254,6 +259,10 @@ class StochasticVolVAR {
  private:
   VAR m_var;
   AR m_vol;
+
+  uword m_size;
+  uword m_flatSize;
+  uword m_midIx;
 
   mat m_grids;
   uvec m_supportSizes;

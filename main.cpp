@@ -8,13 +8,15 @@
 using namespace arma;
 using namespace TimeSeries;
 
+void markovExample();
 void discretizeVARexample();
 void discretizeStochasticVolVARexample();
 
 int main()
 {
-  discretizeVARexample();
-  //  discretizeStochasticVolVARexample();
+  // markovExample();
+  // discretizeVARexample();
+  discretizeStochasticVolVARexample();
   return 0;
 }
 
@@ -23,6 +25,14 @@ int main()
  * Examples
  *
  */
+
+void markovExample()
+{
+  cout << "Markov Example." << endl;
+  AR vol(0.0, 0.95, 0.005);
+  const MarkovChain mc(vol, 5, 3.0, true);
+  mc.print();
+}
 
 void discretizeVARexample()
 {
@@ -68,15 +78,15 @@ void discretizeStochasticVolVARexample()
 
   AR vol(0.0, 0.95, 0.005);
 
-  vec icept = {0.0, 0.0};
+  vec icept = {0.001, -0.05};
   mat rho = {{0.9, 0.0},  //
-             {0.0, 0.9}};
+             {0.0, 0.5}};
   mat sigma = {{0.01 * 0.01, -0.3 * 0.01 * 0.02},  //
                {-0.3 * 0.01 * 0.02, 0.02 * 0.02}};
   VAR atMeanVolVAR(icept, rho, sigma);
 
-  uvec gridSizes = {9, 7};
-  uword volGridSize = 5;
+  uvec gridSizes = {5, 4};
+  uword volGridSize = 3;
   StochasticVolVAR volVAR(atMeanVolVAR, vol, gridSizes, volGridSize, true);
   volVAR.save("stochVol.h5");
 }
