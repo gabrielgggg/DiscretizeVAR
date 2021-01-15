@@ -158,6 +158,8 @@ class OrthogonalizedVAR {
  * Markov Chain
  *
  */
+rowvec stationaryDistribution(const mat& transitionMatrix);
+
 class MarkovChain {
  public:
   uword size() const { return m_size; }
@@ -168,10 +170,10 @@ class MarkovChain {
   mat& transition() { return m_tran; }
   const mat& transition() const { return m_tran; }
 
-  const rowvec& stationary();
-
   void save(std::string fname) const;
   void print() const;
+
+  const rowvec& stationary();
 
   MarkovChain() {}
   MarkovChain(rowvec support, mat transition)
@@ -199,7 +201,6 @@ class DiscreteVAR {
   uword size() const { return m_size; }
   uword flatSize() const { return m_flatSize; }
   uword midIx() const { return m_midIx; }
-  const MarkovChain& markovChain() const { return m_mc; }
   const vec grid(uword varIx) const { return m_grids.col(varIx); }
   const rowvec gridValues(uword ix) const { return m_grids.row(ix); }
   void save(std::string fname) const;
@@ -223,7 +224,6 @@ class DiscreteVAR {
 
  private:
   VAR m_var;
-  MarkovChain m_mc;
 
   uword m_size;
   uword m_flatSize;
@@ -231,6 +231,7 @@ class DiscreteVAR {
 
   mat m_grids;
   uvec m_supportSizes;
+  mat m_tran;
 
   void impl(bool trimGrids, OrthoMethod mm);
 };
@@ -245,8 +246,7 @@ class DiscreteStochVolVAR {
  public:
   uword size() const { return m_size; }
   uword flatSize() const { return m_flatSize; }
-  // uword midIx() const { return m_midIx; }
-  const MarkovChain& markovChain() const { return m_mc; }
+  uword midIx() const { return m_midIx; }
   const vec grid(uword iIx) const { return m_grids.col(iIx); }
   const rowvec gridValues(uword ix) const { return m_grids.row(ix); }
   void save(std::string fname) const;
@@ -265,17 +265,19 @@ class DiscreteStochVolVAR {
  private:
   VAR m_var;
   AR m_vol;
-  MarkovChain m_mc;
 
   uword m_size;
   uword m_flatSize;
-  // uword m_midIx; TODO
+  uword m_midIx;
 
   mat m_grids;
+  mat m_tran;
   uvec m_supportSizes;
   uword m_volGridSize;
 
   void impl(bool trimGrids);
 };
+
+void trimMarkovChain(mat& grids, mat& transition);
 
 }  // namespace TimeSeries

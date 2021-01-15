@@ -1,4 +1,4 @@
-// define ARMA_NO_DEBUG
+#define ARMA_NO_DEBUG
 #define ARMA_ALLOW_FAKE_GCC
 #include <armadillo>
 #include <iostream>
@@ -15,7 +15,7 @@ void discretizeStochasticVolVARexample();
 int main()
 {
   // markovExample();
-  // discretizeVARexample();
+  discretizeVARexample();
   discretizeStochasticVolVARexample();
   return 0;
 }

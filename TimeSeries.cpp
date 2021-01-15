@@ -1,4 +1,4 @@
-// define ARMA_NO_DEBUG
+#define ARMA_NO_DEBUG
 #define ARMA_ALLOW_FAKE_GCC
 #include "TimeSeries.hpp"
 
@@ -164,18 +164,24 @@ MarkovChain::MarkovChain(const AR process, const uword sz, const double pmMCsd,
   if (expSupport) m_support = exp(m_support);
 }
 
+
+rowvec stationaryDistribution(const mat& transitionMatrix) {
+  rowvec stat;
+  cx_vec eigval;
+  cx_mat eigvec;
+  // eig_gen(eigval, eigvec, m_tran.t(), "balance");
+  eigs_gen(eigval, eigvec, sp_mat(transitionMatrix.t()), 1, 1.0);
+
+  uword unitEigIx = (abs(abs(eigval) - 1.0)).index_min();
+
+  stat = abs(eigvec.col(unitEigIx)).t();
+  return stat / sum(stat);
+}
+
 const rowvec& MarkovChain::stationary()
 {
   if (m_stationary.is_empty()) {
-    cx_vec eigval;
-    cx_mat eigvec;
-    // eig_gen(eigval, eigvec, m_tran.t(), "balance");
-    eigs_gen(eigval, eigvec, sp_mat(m_tran.t()), 1, 1.0);
-
-    uword unitEigIx = (abs(abs(eigval) - 1.0)).index_min();
-
-    m_stationary = abs(eigvec.col(unitEigIx)).t();
-    m_stationary = m_stationary / sum(m_stationary);
+    m_stationary = stationaryDistribution(m_tran);
   }
 
   return m_stationary;
@@ -190,6 +196,34 @@ void MarkovChain::save(const std::string fname) const
 
 void MarkovChain::print() const
 { /* TODO */
+}
+
+void trimMarkovChain(mat& grids, mat& transition) {
+    /*
+     * Based on Gordon 2020 wip.
+     */
+    rowvec probs = stationaryDistribution(transition);
+    uword sz = probs.n_elem;
+
+    uvec removePoints;
+    uword removeCount = 0;
+    for (uword ix = 0; ix < sz; ++ix)
+      if (probs(ix) <= minPr) {
+        removePoints.resize(removeCount + 1);
+        removePoints(removeCount) = ix;
+        removeCount++;
+      }
+
+    uword newSz = sz - removeCount;
+    cout << "Removing " << removeCount << " points out of " << sz << "."
+         << endl;
+
+    grids.shed_rows(removePoints);
+    transition.shed_rows(removePoints);
+    transition.shed_cols(removePoints);
+#pragma omp parallel for
+    for (uword fIx = 0; fIx < newSz; ++fIx)
+      transition.row(fIx) = transition.row(fIx) / sum(transition.row(fIx));
 }
 
 /*
@@ -237,8 +271,7 @@ void DiscreteVAR::impl(bool trimGrids, OrthoMethod method)
   }
 
   // Transition matrix
-  mat& tran = m_mc.transition();
-  tran.set_size(m_flatSize, m_flatSize);
+  m_tran.set_size(m_flatSize, m_flatSize);
   for (uword flatIx = 0; flatIx < m_flatSize; ++flatIx) {
     const rowvec tmpVal = m_grids.row(flatIx);
     const vec condMeans = Atilde + Btilde * tmpVal.t();
@@ -255,7 +288,7 @@ void DiscreteVAR::impl(bool trimGrids, OrthoMethod method)
         vec tmpDist = condPrs(vPrIx);
         goPr *= tmpDist(m_map(flatPrIx, vPrIx));
       }
-      tran(flatIx, flatPrIx) = goPr;
+      m_tran(flatIx, flatPrIx) = goPr;
     }
   }
 
@@ -264,36 +297,8 @@ void DiscreteVAR::impl(bool trimGrids, OrthoMethod method)
   cout << "Completed discretization." << endl;
 
   if (trimGrids) {
-    /*
-     * Based on Gordon 2020 wip.
-     */
-    rowvec probs = m_mc.stationary();
-
-    uvec removePoints;
-    uword removeCount = 0;
-    for (uword flatIx = 0; flatIx < m_flatSize; ++flatIx)
-      if (probs(flatIx) <= minPr) {
-        removePoints.resize(removeCount + 1);
-        removePoints(removeCount) = flatIx;
-        removeCount++;
-      }
-
-    uword newFlatSize = m_flatSize - removeCount;
-    cout << "Removing " << removeCount << " points out of " << m_flatSize << "."
-         << endl;
-
-    mat newGrids = m_grids;
-    newGrids.shed_rows(removePoints);
-    mat newTran = tran;
-    newTran.shed_rows(removePoints);
-    newTran.shed_cols(removePoints);
-#pragma omp parallel for
-    for (uword fIx = 0; fIx < newFlatSize; ++fIx)
-      newTran.row(fIx) = newTran.row(fIx) / sum(newTran.row(fIx));
-
-    m_grids = newGrids;
-    tran = newTran;
-    m_flatSize = newFlatSize;
+    trimMarkovChain(m_grids, m_tran);
+    m_flatSize = m_tran.n_rows;
   }
 
   // Finding midIx
@@ -311,13 +316,13 @@ void DiscreteVAR::print() const
   cout << "Grid:" << endl;
   m_grids.print();
   cout << endl << "Transition matrix: " << endl;
-  m_mc.transition().print();
+  m_tran.print();
 }
 
 void DiscreteVAR::save(const std::string fname) const
 {
   m_grids.save(hdf5_name(fname, "DVAR/grids", hdf5_opts::replace));
-  m_mc.transition().save(
+  m_tran.save(
       hdf5_name(fname, "DVAR/transitions", hdf5_opts::replace));
   m_var.intercept().save(
       hdf5_name(fname, "DVAR/varIntercept", hdf5_opts::replace));
@@ -382,9 +387,8 @@ void DiscreteStochVolVAR::impl(bool trimGrids)
   }
 
   // Transition matrix
-  mat& tran = m_mc.transition();
-  tran.set_size(m_flatSize, m_flatSize);
-  tran.fill(0.0);
+  m_tran.set_size(m_flatSize, m_flatSize);
+  m_tran.fill(0.0);
 #pragma omp parallel for
   for (uword flatIx = 0; flatIx < m_flatSize; ++flatIx) {
     const uword thisVolIx = m_map(flatIx, m_size);
@@ -406,7 +410,7 @@ void DiscreteStochVolVAR::impl(bool trimGrids)
         const vec condPrVec = condPrs(iiIx, vPrIx);
         goPr *= condPrVec(m_map(flatPrIx, iiIx));
       }
-      tran(flatIx, flatPrIx) = goPr * volTran(thisVolIx, vPrIx);
+      m_tran(flatIx, flatPrIx) = goPr * volTran(thisVolIx, vPrIx);
     }
   }
 
@@ -414,50 +418,26 @@ void DiscreteStochVolVAR::impl(bool trimGrids)
   m_grids.cols(0, m_size-1) = (rotationLL * m_grids.cols(0, m_size-1).t()).t();
   cout << "Completed discretization." << endl;
 
-  if (trimGrids) { /* TODO Refactor out. */
-    /*
-     * Based on Gordon 2020 wip.
-     */
-    rowvec probs = m_mc.stationary();
-
-    uvec removePoints;
-    uword removeCount = 0;
-    for (uword flatIx = 0; flatIx < m_flatSize; ++flatIx)
-      if (probs(flatIx) <= minPr) {
-        removePoints.resize(removeCount + 1);
-        removePoints(removeCount) = flatIx;
-        removeCount++;
-      }
-
-    uword newFlatSize = m_flatSize - removeCount;
-    cout << "Removing " << removeCount << " points out of " << m_flatSize << "."
-         << endl;
-
-    mat newGrids = m_grids;
-    newGrids.shed_rows(removePoints);
-    mat newTran = tran;
-    newTran.shed_rows(removePoints);
-    newTran.shed_cols(removePoints);
-#pragma omp parallel for
-    for (uword fIx = 0; fIx < newFlatSize; ++fIx)
-      newTran.row(fIx) = newTran.row(fIx) / sum(newTran.row(fIx));
-
-    m_grids = newGrids;
-    tran = newTran;
-    m_flatSize = newFlatSize;
+  if (trimGrids) {
+    trimMarkovChain(m_grids, m_tran);
+    m_flatSize = m_tran.n_rows;
   }
 
+  /* TODO midIx */
 }
 
 void DiscreteStochVolVAR::save(const std::string fname) const
 {
   m_grids.save(hdf5_name(fname, "DsvVAR/grids", hdf5_opts::replace));
-  m_mc.transition().save(
+  m_tran.save(
       hdf5_name(fname, "DsvVAR/transitions", hdf5_opts::replace));
   m_var.intercept().save(
       hdf5_name(fname, "DsvVAR/varIntercept", hdf5_opts::replace));
   m_var.rho().save(hdf5_name(fname, "DsvVAR/varRho", hdf5_opts::replace));
   m_var.sigma().save(hdf5_name(fname, "DsvVAR/varSigma", hdf5_opts::replace));
+
+  vec volAR = { m_vol.intercept(), m_vol.rho(), m_vol.sigma() };
+  volAR.save(hdf5_name(fname, "DsvVAR/volatilityAR1params", hdf5_opts::replace));
 }
 
 void DiscreteStochVolVAR::print() const
