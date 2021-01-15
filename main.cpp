@@ -76,17 +76,17 @@ void discretizeStochasticVolVARexample()
   cout << "Discretize stochatic VAR example. Results saved in stochVol.h5"
        << endl;
 
-  AR vol(0.0, 0.75, 0.1);
+  AR vol(0.0, 0.9, 0.05);
 
-  vec icept = {0.001, -0.05};
+  vec icept = {0.0, 0.0};
   mat rho = {{0.9, 0.0},  //
-             {0.0, 0.5}};
-  mat sigma = {{0.01 * 0.01, -0.3 * 0.01 * 0.02},  //
-               {-0.3 * 0.01 * 0.02, 0.02 * 0.02}};
+             {0.0, 0.9}};
+  mat sigma = {{0.015 * 0.015, -0.3 * 0.015 * 0.015},  //
+               {-0.3 * 0.015 * 0.015, 0.015 * 0.015}};
   VAR atMeanVolVAR(icept, rho, sigma);
 
-  uvec gridSizes = {15, 17};
-  uword volGridSize = 3;
+  uvec gridSizes = {15, 15};
+  uword volGridSize = 11;
   DiscreteStochVolVAR volVAR(atMeanVolVAR, vol, gridSizes, volGridSize, true);
   volVAR.save("stochVol.h5");
 }

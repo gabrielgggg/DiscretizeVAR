@@ -385,6 +385,7 @@ void DiscreteStochVolVAR::impl(bool trimGrids)
   mat& tran = m_mc.transition();
   tran.set_size(m_flatSize, m_flatSize);
   tran.fill(0.0);
+#pragma omp parallel for
   for (uword flatIx = 0; flatIx < m_flatSize; ++flatIx) {
     const uword thisVolIx = m_map(flatIx, m_size);
     const rowvec thisValues = m_grids.row(flatIx).head(m_size);
@@ -412,6 +413,39 @@ void DiscreteStochVolVAR::impl(bool trimGrids)
   // Adjust grids
   m_grids.cols(0, m_size-1) = (rotationLL * m_grids.cols(0, m_size-1).t()).t();
   cout << "Completed discretization." << endl;
+
+  if (trimGrids) { /* TODO Refactor out. */
+    /*
+     * Based on Gordon 2020 wip.
+     */
+    rowvec probs = m_mc.stationary();
+
+    uvec removePoints;
+    uword removeCount = 0;
+    for (uword flatIx = 0; flatIx < m_flatSize; ++flatIx)
+      if (probs(flatIx) <= minPr) {
+        removePoints.resize(removeCount + 1);
+        removePoints(removeCount) = flatIx;
+        removeCount++;
+      }
+
+    uword newFlatSize = m_flatSize - removeCount;
+    cout << "Removing " << removeCount << " points out of " << m_flatSize << "."
+         << endl;
+
+    mat newGrids = m_grids;
+    newGrids.shed_rows(removePoints);
+    mat newTran = tran;
+    newTran.shed_rows(removePoints);
+    newTran.shed_cols(removePoints);
+#pragma omp parallel for
+    for (uword fIx = 0; fIx < newFlatSize; ++fIx)
+      newTran.row(fIx) = newTran.row(fIx) / sum(newTran.row(fIx));
+
+    m_grids = newGrids;
+    tran = newTran;
+    m_flatSize = newFlatSize;
+  }
 
 }
 
