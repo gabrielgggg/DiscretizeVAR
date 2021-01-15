@@ -67,7 +67,9 @@ DiscreteRV discretizeNormal(const double mean, const double sigma,
 }
 
 /*
- * VAR(1) stationary distribution.
+ *
+ * VAR(1)
+ *
  */
 const MvNormal VAR::conditional(vec& current) const
 {
@@ -139,7 +141,9 @@ void VAR::print()
 }
 
 /*
+ *
  * Markov Chain
+ *
  */
 MarkovChain::MarkovChain(const AR process, const uword sz, const double pmMCsd,
                          bool expSupport)
@@ -185,26 +189,14 @@ void MarkovChain::save(const std::string fname) const
 }
 
 void MarkovChain::print() const
-{
-  m_support.print("print() : m_support");
-  m_stationary.print("print() : m_stationary");
-  m_tran.print("print() : m_tran");
+{ /* TODO */
 }
 
 /*
- * Discretized VAR(1) => MarkovChain
+ *
+ * Discretized VAR(1)
+ *
  */
-void DiscreteVAR::save(const std::string fname) const
-{
-  m_grids.save(hdf5_name(fname, "DVAR/grids", hdf5_opts::replace));
-  m_mc.transition().save(
-      hdf5_name(fname, "DVAR/transitions", hdf5_opts::replace));
-  m_var.intercept().save(
-      hdf5_name(fname, "DVAR/varIntercept", hdf5_opts::replace));
-  m_var.rho().save(hdf5_name(fname, "DVAR/varRho", hdf5_opts::replace));
-  m_var.sigma().save(hdf5_name(fname, "DVAR/varSigma", hdf5_opts::replace));
-}
-
 void DiscreteVAR::impl(bool trimGrids, OrthoMethod method)
 {
   // Sizing
@@ -217,7 +209,7 @@ void DiscreteVAR::impl(bool trimGrids, OrthoMethod method)
   mat LL = ortho.getSupportRotationMatrix();
   VAR orthog = ortho.getVAR();
 
-  const mat Atilde = orthog.intercept();
+  const vec Atilde = orthog.intercept();
   const mat Btilde = orthog.rho();
   const vec DD = orthog.sigma().diag();
 
@@ -248,9 +240,9 @@ void DiscreteVAR::impl(bool trimGrids, OrthoMethod method)
   mat& tran = m_mc.transition();
   tran.set_size(m_flatSize, m_flatSize);
   for (uword flatIx = 0; flatIx < m_flatSize; ++flatIx) {
-    rowvec tmpVal = m_grids.row(flatIx);
-    vec condMeans = Atilde + Btilde * tmpVal.t();
-    vec condSd = sqrt(DD);
+    const rowvec tmpVal = m_grids.row(flatIx);
+    const vec condMeans = Atilde + Btilde * tmpVal.t();
+    const vec condSd = sqrt(DD);
     field<vec> condPrs(m_size);
     for (uword vIx = 0; vIx < m_size; ++vIx)
       condPrs(vIx) =
@@ -322,14 +314,23 @@ void DiscreteVAR::print() const
   m_mc.transition().print();
 }
 
+void DiscreteVAR::save(const std::string fname) const
+{
+  m_grids.save(hdf5_name(fname, "DVAR/grids", hdf5_opts::replace));
+  m_mc.transition().save(
+      hdf5_name(fname, "DVAR/transitions", hdf5_opts::replace));
+  m_var.intercept().save(
+      hdf5_name(fname, "DVAR/varIntercept", hdf5_opts::replace));
+  m_var.rho().save(hdf5_name(fname, "DVAR/varRho", hdf5_opts::replace));
+  m_var.sigma().save(hdf5_name(fname, "DVAR/varSigma", hdf5_opts::replace));
+}
+
 /*
+ *
  * Stochastic volatility VAR
+ *
  */
-void StochasticVolVAR::save(const std::string fname) const {}
-
-void StochasticVolVAR::print() const {}
-
-void StochasticVolVAR::impl(bool trimGrids)
+void DiscreteStochVolVAR::impl(bool trimGrids)
 {
   m_size = m_var.size();
   uword justDimsSz = prod(m_supportSizes);
@@ -339,6 +340,7 @@ void StochasticVolVAR::impl(bool trimGrids)
 
   MarkovChain volMC(m_vol, m_volGridSize, pmSd, true);
   const rowvec& vols = volMC.support();
+  const mat& volTran = volMC.transition();
 
   OrthogonalizedVAR ortho(m_var);  // Default to Cholesky
   mat rotationLL = ortho.getSupportRotationMatrix();
@@ -346,7 +348,7 @@ void StochasticVolVAR::impl(bool trimGrids)
   const vec uncondE = orthog.stationaryMean();
   const vec uncondV = orthog.stationarySigma().diag();
 
-  const mat Atilde = orthog.intercept();
+  const vec Atilde = orthog.intercept();
   const mat Btilde = orthog.rho();
   const vec DD = orthog.sigma().diag();
 
@@ -360,14 +362,12 @@ void StochasticVolVAR::impl(bool trimGrids)
                         uncondE(iIx) + pmSd * vols(volIx) * sqrt(uncondV(iIx)),
                         m_supportSizes(iIx));
 
-  // Prepare flat grids
+      // Prepare flat grids
 #pragma omp parallel for collapse(2)
   for (uword volIx = 0; volIx < m_volGridSize; ++volIx) {
     for (uword flatIx = 0; flatIx < justDimsSz; ++flatIx) {
       uword withV = justDimsSz * volIx + flatIx;
 
-      // cout << " Vol  " << volIx << " flat " << flatIx << " withV " << withV
-      // << endl;
       m_map(withV, m_size) = volIx;
       m_grids(withV, m_size) = vols(volIx);
 
@@ -380,6 +380,54 @@ void StochasticVolVAR::impl(bool trimGrids)
       }
     }
   }
+
+  // Transition matrix
+  mat& tran = m_mc.transition();
+  tran.set_size(m_flatSize, m_flatSize);
+  tran.fill(0.0);
+  for (uword flatIx = 0; flatIx < m_flatSize; ++flatIx) {
+    const uword thisVolIx = m_map(flatIx, m_size);
+    const rowvec thisValues = m_grids.row(flatIx).head(m_size);
+    const vec condMeans = Atilde + Btilde * thisValues.t();
+    const vec condSdReference = sqrt(DD);
+
+    field<vec> condPrs(m_size, m_volGridSize);
+    for (uword iIx = 0; iIx < m_size; ++iIx)
+      for (uword vPrIx = 0; vPrIx < m_volGridSize; ++vPrIx)
+        condPrs(iIx, vPrIx) =
+            discretizeNormal(m_orthogGrids(iIx, vPrIx), condMeans(iIx),
+                             vols(vPrIx) * condSdReference(iIx));
+
+    for (uword flatPrIx = 0; flatPrIx < m_flatSize; ++flatPrIx) {
+      const uword vPrIx = m_map(flatPrIx, m_size);
+      double goPr = 1.0;
+      for (uword iiIx = 0; iiIx < m_size; ++iiIx) {
+        const vec condPrVec = condPrs(iiIx, vPrIx);
+        goPr *= condPrVec(m_map(flatPrIx, iiIx));
+      }
+      tran(flatIx, flatPrIx) = goPr * volTran(thisVolIx, vPrIx);
+    }
+  }
+
+  // Adjust grids
+  m_grids.cols(0, m_size-1) = (rotationLL * m_grids.cols(0, m_size-1).t()).t();
+  cout << "Completed discretization." << endl;
+
+}
+
+void DiscreteStochVolVAR::save(const std::string fname) const
+{
+  m_grids.save(hdf5_name(fname, "DsvVAR/grids", hdf5_opts::replace));
+  m_mc.transition().save(
+      hdf5_name(fname, "DsvVAR/transitions", hdf5_opts::replace));
+  m_var.intercept().save(
+      hdf5_name(fname, "DsvVAR/varIntercept", hdf5_opts::replace));
+  m_var.rho().save(hdf5_name(fname, "DsvVAR/varRho", hdf5_opts::replace));
+  m_var.sigma().save(hdf5_name(fname, "DsvVAR/varSigma", hdf5_opts::replace));
+}
+
+void DiscreteStochVolVAR::print() const
+{ /* TODO */
 }
 
 }  // namespace TimeSeries

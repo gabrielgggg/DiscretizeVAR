@@ -241,13 +241,19 @@ class DiscreteVAR {
  * Basal-Yaron-like.
  *
  */
-class StochasticVolVAR {
+class DiscreteStochVolVAR {
  public:
+  uword size() const { return m_size; }
+  uword flatSize() const { return m_flatSize; }
+  // uword midIx() const { return m_midIx; }
+  const MarkovChain& markovChain() const { return m_mc; }
+  const vec grid(uword iIx) const { return m_grids.col(iIx); }
+  const rowvec gridValues(uword ix) const { return m_grids.row(ix); }
   void save(std::string fname) const;
   void print() const;
 
-  StochasticVolVAR(const VAR var, const AR vol, const uvec gridSizes,
-                   const uword volGridSize, bool trimGrids = true)
+  DiscreteStochVolVAR(const VAR var, const AR vol, const uvec gridSizes,
+                      const uword volGridSize, bool trimGrids = true)
       : m_var(var)
       , m_vol(vol)
       , m_supportSizes(gridSizes)
@@ -259,10 +265,11 @@ class StochasticVolVAR {
  private:
   VAR m_var;
   AR m_vol;
+  MarkovChain m_mc;
 
   uword m_size;
   uword m_flatSize;
-  uword m_midIx;
+  // uword m_midIx; TODO
 
   mat m_grids;
   uvec m_supportSizes;
