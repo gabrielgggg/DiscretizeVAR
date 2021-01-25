@@ -1,6 +1,7 @@
 clear;
 
 % Solution
+midIx = h5read('myMCvar.h5', '/DVAR/midIx') + 1;
 grids = h5read('myMCvar.h5', '/DVAR/grids');
 transitions = h5read('myMCvar.h5', '/DVAR/transitions');
 varIntercept = h5read('myMCvar.h5', '/DVAR/varIntercept');
@@ -37,8 +38,10 @@ figure;
 % subplot(1, 2, 1);
 % scatter3(grids(:, 1), grids(:, 2), statdist); hold on;
 % scatter(path1, path2, 'rx');
-scatter3(precise1, precise2, precise3, 'rd', 'filled'); hold on;
-scatter3(grids(:, 1), grids(:, 2), grids(:, 3), 'bo', 'filled'); 
+% scatter3(precise1, precise2, precise3, 'rx'); hold on;
+% scatter3(grids(:, 1), grids(:, 2), grids(:, 3), 'bo', 'filled'); 
+scatter3(grids(midIx, 1), grids(midIx, 2), grids(midIx, 3), 'kd', 'filled'); 
+hold on;
 
 k = boundary(grids);
 trisurf(k,grids(:,1),grids(:,2),grids(:,3),'Facecolor','blue','FaceAlpha',0.15)
