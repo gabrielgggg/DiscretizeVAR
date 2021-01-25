@@ -1,4 +1,4 @@
-// define ARMA_NO_DEBUG
+#define ARMA_NO_DEBUG
 #define ARMA_ALLOW_FAKE_GCC
 #include "TimeSeries.hpp"
 
