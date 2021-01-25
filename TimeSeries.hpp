@@ -203,6 +203,7 @@ class DiscreteVAR {
   uword midIx() const { return m_midIx; }
   const vec grid(uword varIx) const { return m_grids.col(varIx); }
   const rowvec gridValues(uword ix) const { return m_grids.row(ix); }
+  const mat transition() const { return m_tran; }
   void save(std::string fname) const;
   void print() const;
 
