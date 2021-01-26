@@ -248,6 +248,7 @@ class DiscreteStochVolVAR {
   uword size() const { return m_size; }
   uword flatSize() const { return m_flatSize; }
   uword midIx() const { return m_midIx; }
+  const mat transition() const { return m_tran; }
   const vec grid(uword iIx) const { return m_grids.col(iIx); }
   const rowvec gridValues(uword ix) const { return m_grids.row(ix); }
   void save(std::string fname) const;
