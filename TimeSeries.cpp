@@ -56,7 +56,7 @@ vec discretizeNormal(vec grid, const double mean, const double sigma,
  * spanning +/- pmSigma standard deviations.
  */
 DiscreteRV discretizeNormal(const double mean, const double sigma,
-                            const uword n_elem, const uword pmSigma,
+                            const uword n_elem, const double pmSigma,
                             bool cutTails)
 {
   DiscreteRV drv;
@@ -402,7 +402,7 @@ void DiscreteStochVolVAR::impl(bool trimGrids)
     for (uword iIx = 0; iIx < m_size; ++iIx)
       condPrs(iIx) =
           discretizeNormal(m_orthogGrids(iIx, thisVolIx), condMeans(iIx),
-                             vols(thisVolIx) * condSdReference(iIx));
+                           vols(thisVolIx) * condSdReference(iIx));
 
     for (uword flatPrIx = 0; flatPrIx < m_flatSize; ++flatPrIx) {
       double goPr = 1.0;
