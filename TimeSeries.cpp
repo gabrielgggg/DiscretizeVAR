@@ -398,20 +398,19 @@ void DiscreteStochVolVAR::impl(bool trimGrids)
     const vec condMeans = Atilde + Btilde * thisValues.t();
     const vec condSdReference = sqrt(DD);
 
-    field<vec> condPrs(m_size, m_volGridSize);
+    field<vec> condPrs(m_size);
     for (uword iIx = 0; iIx < m_size; ++iIx)
-      for (uword vPrIx = 0; vPrIx < m_volGridSize; ++vPrIx)
-        condPrs(iIx, vPrIx) =
-            discretizeNormal(m_orthogGrids(iIx, vPrIx), condMeans(iIx),
-                             vols(vPrIx) * condSdReference(iIx));
+      condPrs(iIx) =
+          discretizeNormal(m_orthogGrids(iIx, thisVolIx), condMeans(iIx),
+                             vols(thisVolIx) * condSdReference(iIx));
 
     for (uword flatPrIx = 0; flatPrIx < m_flatSize; ++flatPrIx) {
-      const uword vPrIx = m_map(flatPrIx, m_size);
       double goPr = 1.0;
       for (uword iiIx = 0; iiIx < m_size; ++iiIx) {
-        const vec condPrVec = condPrs(iiIx, vPrIx);
+        const vec condPrVec = condPrs(iiIx);
         goPr *= condPrVec(m_map(flatPrIx, iiIx));
       }
+      const uword vPrIx = m_map(flatPrIx, m_size);
       m_tran(flatIx, flatPrIx) = goPr * volTran(thisVolIx, vPrIx);
     }
   }
