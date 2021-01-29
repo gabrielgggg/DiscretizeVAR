@@ -170,7 +170,8 @@ rowvec stationaryDistribution(const mat& transitionMatrix)
   cx_vec eigval;
   cx_mat eigvec;
   // eig_gen(eigval, eigvec, m_tran.t(), "balance");
-  eigs_gen(eigval, eigvec, sp_mat(transitionMatrix.t()), 1, 1.0);
+  sp_mat spVer(transitionMatrix.t());
+  eigs_gen(eigval, eigvec, spVer, 1);
 
   uword unitEigIx = (abs(abs(eigval) - 1.0)).index_min();
 

@@ -10,7 +10,7 @@ ifeq ($(tools),gnu)
   libs = -larmadillo 
 else ifeq ($(tools),intel)
   compiler = icpc
-  flags = -Ofast -ipo -parallel -align -xHost -qopenmp -std=c++20
+  flags = -Ofast -parallel -align -xHost -qopenmp -std=c++20 -ipo
   fWarn = -W -g -pedantic
   libs = -larmadillo -mkl
 else
