@@ -66,7 +66,7 @@ void discretizeVARexample()
     return;
   }
 
-  uvec gridSizes = {19, 13, 15};
+  uvec gridSizes = {11, 11, 11};
   DiscreteVAR myMCvar(myVarN, gridSizes, true, OrthoMethod::Cholesky);
   myMCvar.save("myMCvar.h5");
 }
@@ -85,8 +85,8 @@ void discretizeStochasticVolVARexample()
                {-0.3 * 0.015 * 0.015, 0.015 * 0.015}};
   VAR atMeanVolVAR(icept, rho, sigma);
 
-  uvec gridSizes = {15, 15};
-  uword volGridSize = 11;
+  uvec gridSizes = {11, 11};
+  uword volGridSize = 9;
   DiscreteStochVolVAR volVAR(atMeanVolVAR, vol, gridSizes, volGridSize, true);
   volVAR.save("stochVol.h5");
 }

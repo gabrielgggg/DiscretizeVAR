@@ -39,9 +39,10 @@ figure;
 % scatter3(grids(:, 1), grids(:, 2), statdist); hold on;
 % scatter(path1, path2, 'rx');
 % scatter3(precise1, precise2, precise3, 'rx'); hold on;
-% scatter3(grids(:, 1), grids(:, 2), grids(:, 3), 'bo', 'filled'); 
-scatter3(grids(midIx, 1), grids(midIx, 2), grids(midIx, 3), 'kd', 'filled'); 
+scatter3(grids(:, 1), grids(:, 2), grids(:, 3), 'bo', 'filled'); 
 hold on;
+scatter3(grids(midIx, 1), grids(midIx, 2), grids(midIx, 3), 'kd', 'filled'); 
+
 
 k = boundary(grids);
 trisurf(k,grids(:,1),grids(:,2),grids(:,3),'Facecolor','blue','FaceAlpha',0.15)

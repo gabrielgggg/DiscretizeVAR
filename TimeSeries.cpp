@@ -16,7 +16,7 @@ namespace TimeSeries {
  * Discretize Normal for given grid.
  */
 vec discretizeNormal(vec grid, const double mean, const double sigma,
-    bool cutTails)
+                     bool cutTails)
 {
   uword sz = grid.n_elem;
   vec prs(sz);
@@ -32,17 +32,21 @@ vec discretizeNormal(vec grid, const double mean, const double sigma,
 
 #pragma omp parallel for
   for (uword ix = 1; ix < sz - 1; ++ix)
-    prs(ix) = normcdf((grid(ix) + grid(ix + 1)) / 2.0, mean, sigma) - normcdf((grid(ix - 1) + grid(ix)) / 2.0, mean, sigma);
+    prs(ix) = normcdf((grid(ix) + grid(ix + 1)) / 2.0, mean, sigma) -
+              normcdf((grid(ix - 1) + grid(ix)) / 2.0, mean, sigma);
 
   if (cutTails) {
     const double stepOut = (grid(1) - grid(0)) / 2.0;
-    prs(0) = normcdf(grid(0) + stepOut, mean, sigma) - normcdf(grid(0) - stepOut, mean, sigma);
-    prs(sz - 1) = normcdf(grid(sz - 1) + stepOut, mean, sigma) - normcdf(grid(sz - 1) - stepOut, mean, sigma);
+    prs(0) = normcdf(grid(0) + stepOut, mean, sigma) -
+             normcdf(grid(0) - stepOut, mean, sigma);
+    prs(sz - 1) = normcdf(grid(sz - 1) + stepOut, mean, sigma) -
+                  normcdf(grid(sz - 1) - stepOut, mean, sigma);
 
     prs /= sum(prs);
   } else {
     prs(0) = normcdf((grid(0) + grid(1)) / 2.0, mean, sigma);
-    prs(sz - 1) = 1.0 - normcdf((grid(sz - 2) + grid(sz - 1)) / 2.0, mean, sigma);
+    prs(sz - 1) =
+        1.0 - normcdf((grid(sz - 2) + grid(sz - 1)) / 2.0, mean, sigma);
   }
 
   return prs;
@@ -53,15 +57,16 @@ vec discretizeNormal(vec grid, const double mean, const double sigma,
  * spanning +/- pmSigma standard deviations.
  */
 DiscreteRV discretizeNormal(const double mean, const double sigma,
-    const uword n_elem, const double pmSigma,
-    bool cutTails)
+                            const uword n_elem, const double pmSigma,
+                            bool cutTails)
 {
   DiscreteRV drv;
   if (n_elem == 1) {
-    drv.support = { mean };
-    drv.probabilities = { 1.0 };
+    drv.support = {mean};
+    drv.probabilities = {1.0};
   } else {
-    drv.support = linspace<vec>(mean - pmSigma * sigma, mean + pmSigma * sigma, n_elem);
+    drv.support =
+        linspace<vec>(mean - pmSigma * sigma, mean + pmSigma * sigma, n_elem);
     drv.probabilities = discretizeNormal(drv.support, mean, sigma, cutTails);
   }
   return drv;
@@ -82,50 +87,42 @@ const MvNormal VAR::conditional(vec& current) const
 
 void VAR::findStationary()
 {
-  const mat eyeRho = eye(m_size, m_size) - m_rho;
-  double theDet = det(eyeRho);
-
-  if (fabs(theDet) < TStol) {
-    cout << "Determinant " << det(eyeRho) << endl;
+  const cx_vec theEigs = eig_gen(m_rho);
+  if (any(abs(theEigs) >= 1.0)) {
+    cout << "Eigenvalues exceeding 1 in abs value. Nonstationary." << endl;
     is_stationary = false;
     m_statMean.reset();
     m_statSigma.reset();
     return;
-  } else
-    is_stationary = true;
+  }
 
+  is_stationary = true;
+
+  const mat eyeRho = eye(m_size, m_size) - m_rho;
   m_statMean = solve(eyeRho, m_intercept);
 
-  mat v0 = m_sigma;
-  mat v1 = m_sigma;
-  v0.fill(0.0);
-  double err = 1.0;
-  while (err > TStol) {
-    v1 = m_rho * v0 * m_rho.t() + m_sigma;
-    err = abs(v1 - v0).max();
-    v0 = v1;
-  }
-  m_statSigma = v1;
+  const mat kprod = kron(m_rho, m_rho);
+  const mat theEye(kprod.n_rows, kprod.n_cols, fill::eye);
+  const vec vecSigma = m_sigma.as_col();
+  const vec tmp = solve(theEye - kprod, vecSigma);
+  m_statSigma = reshape(tmp, m_rho.n_rows, m_rho.n_cols);
 }
 
 vec& VAR::stationaryMean()
 {
-  if (m_statMean.is_empty())
-    findStationary();
+  if (m_statMean.is_empty()) findStationary();
   return m_statMean;
 }
 
 mat& VAR::stationarySigma()
 {
-  if (m_statSigma.is_empty())
-    findStationary();
+  if (m_statSigma.is_empty()) findStationary();
   return m_statSigma;
 }
 
 bool VAR::stationaryQ()
 {
-  if (m_statMean.is_empty())
-    findStationary();
+  if (m_statMean.is_empty()) findStationary();
   return is_stationary;
 }
 
@@ -150,15 +147,16 @@ void VAR::print()
  *
  */
 MarkovChain::MarkovChain(const AR process, const uword sz, const double pmMCsd,
-    bool expSupport)
+                         bool expSupport)
 {
   m_size = sz;
   double pMean = process.stationaryMean();
   double pSd = process.stationarySigma();
   if (sz == 1)
-    m_support = { pMean };
+    m_support = {pMean};
   else
-    m_support = linspace<rowvec>(pMean - pmMCsd * pSd, pMean + pmMCsd * pSd, sz);
+    m_support =
+        linspace<rowvec>(pMean - pmMCsd * pSd, pMean + pmMCsd * pSd, sz);
 
   m_tran.set_size(sz, sz);
 #pragma omp parallel for
@@ -168,8 +166,7 @@ MarkovChain::MarkovChain(const AR process, const uword sz, const double pmMCsd,
     m_tran.row(rIx) = condPrs.t();
   }
 
-  if (expSupport)
-    m_support = exp(m_support);
+  if (expSupport) m_support = exp(m_support);
 }
 
 rowvec stationaryDistribution(const mat& transitionMatrix)
@@ -186,7 +183,8 @@ rowvec stationaryDistribution(const mat& transitionMatrix)
   return stat / sum(stat);
 }
 
-uvec simulateChain(const mat& transitionMatrix, const uword initState, const uword simSz)
+uvec simulateChain(const mat& transitionMatrix, const uword initState,
+                   const uword simSz)
 {
   const mat cumMat = cumsum(transitionMatrix, 1);
   const uword sz = transitionMatrix.n_rows;
@@ -285,11 +283,11 @@ void DiscreteVAR::impl(bool trimGrids, OrthoMethod method)
 #pragma omp parallel for
   for (uword vIx = 0; vIx < m_size; ++vIx)
     if (m_supportSizes(vIx) > 1) {
-      m_orthogGrids(vIx) = linspace<vec>(uncondE(vIx) - pmSd * sqrt(uncondV(vIx)),
-          uncondE(vIx) + pmSd * sqrt(uncondV(vIx)),
-          m_supportSizes(vIx));
+      m_orthogGrids(vIx) = linspace<vec>(
+          uncondE(vIx) - pmSd * sqrt(uncondV(vIx)),
+          uncondE(vIx) + pmSd * sqrt(uncondV(vIx)), m_supportSizes(vIx));
     } else {
-      m_orthogGrids(vIx) = { uncondE(vIx) };
+      m_orthogGrids(vIx) = {uncondE(vIx)};
     }
 
     // Prepare flat grids
@@ -312,7 +310,8 @@ void DiscreteVAR::impl(bool trimGrids, OrthoMethod method)
     const vec condSd = sqrt(DD);
     field<vec> condPrs(m_size);
     for (uword vIx = 0; vIx < m_size; ++vIx)
-      condPrs(vIx) = discretizeNormal(m_orthogGrids(vIx), condMeans(vIx), condSd(vIx));
+      condPrs(vIx) =
+          discretizeNormal(m_orthogGrids(vIx), condMeans(vIx), condSd(vIx));
 
 #pragma omp parallel for
     for (uword flatPrIx = 0; flatPrIx < m_flatSize; ++flatPrIx) {
@@ -349,14 +348,13 @@ void DiscreteVAR::print() const
 {
   cout << "Grid:" << endl;
   m_grids.print();
-  cout << endl
-       << "Transition matrix: " << endl;
+  cout << endl << "Transition matrix: " << endl;
   m_tran.print();
 }
 
 void DiscreteVAR::save(const std::string fname) const
 {
-  uvec tmp = { m_midIx };
+  uvec tmp = {m_midIx};
   tmp.save(hdf5_name(fname, "DVAR/midIx", hdf5_opts::replace));
   m_grids.save(hdf5_name(fname, "DVAR/grids", hdf5_opts::replace));
   m_tran.save(hdf5_name(fname, "DVAR/transitions", hdf5_opts::replace));
@@ -383,7 +381,7 @@ void DiscreteStochVolVAR::impl(bool trimGrids)
   const rowvec& vols = volMC.support();
   const mat& volTran = volMC.transition();
 
-  OrthogonalizedVAR ortho(m_var); // Default to Cholesky
+  OrthogonalizedVAR ortho(m_var);  // Default to Cholesky
   mat rotationLL = ortho.getSupportRotationMatrix();
   VAR orthog = ortho.getVAR();
   const vec uncondE = orthog.stationaryMean();
@@ -399,11 +397,12 @@ void DiscreteStochVolVAR::impl(bool trimGrids)
   for (uword volIx = 0; volIx < m_volGridSize; ++volIx)
     for (uword iIx = 0; iIx < m_size; ++iIx)
       if (m_supportSizes(iIx) > 1) {
-        m_orthogGrids(iIx, volIx) = linspace<vec>(uncondE(iIx) - pmSd * vols(volIx) * sqrt(uncondV(iIx)),
+        m_orthogGrids(iIx, volIx) = linspace<vec>(
+            uncondE(iIx) - pmSd * vols(volIx) * sqrt(uncondV(iIx)),
             uncondE(iIx) + pmSd * vols(volIx) * sqrt(uncondV(iIx)),
             m_supportSizes(iIx));
       } else {
-        m_orthogGrids(iIx, volIx) = { uncondE(iIx) };
+        m_orthogGrids(iIx, volIx) = {uncondE(iIx)};
       }
 
       // Prepare flat grids
@@ -437,8 +436,9 @@ void DiscreteStochVolVAR::impl(bool trimGrids)
 
     field<vec> condPrs(m_size);
     for (uword iIx = 0; iIx < m_size; ++iIx)
-      condPrs(iIx) = discretizeNormal(m_orthogGrids(iIx, thisVolIx), condMeans(iIx),
-          vols(thisVolIx) * condSdReference(iIx));
+      condPrs(iIx) =
+          discretizeNormal(m_orthogGrids(iIx, thisVolIx), condMeans(iIx),
+                           vols(thisVolIx) * condSdReference(iIx));
 
     for (uword flatPrIx = 0; flatPrIx < m_flatSize; ++flatPrIx) {
       double goPr = 1.0;
@@ -452,7 +452,8 @@ void DiscreteStochVolVAR::impl(bool trimGrids)
   }
 
   // Adjust grids
-  m_grids.cols(0, m_size - 1) = (rotationLL * m_grids.cols(0, m_size - 1).t()).t();
+  m_grids.cols(0, m_size - 1) =
+      (rotationLL * m_grids.cols(0, m_size - 1).t()).t();
   cout << "Completed discretization." << endl;
 
   if (trimGrids) {
@@ -475,7 +476,7 @@ void DiscreteStochVolVAR::impl(bool trimGrids)
 
 void DiscreteStochVolVAR::save(const std::string fname) const
 {
-  uvec tmp = { m_midIx };
+  uvec tmp = {m_midIx};
   tmp.save(hdf5_name(fname, "DsvVAR/midIx", hdf5_opts::replace));
   m_grids.save(hdf5_name(fname, "DsvVAR/grids", hdf5_opts::replace));
   m_tran.save(hdf5_name(fname, "DsvVAR/transitions", hdf5_opts::replace));
@@ -484,7 +485,7 @@ void DiscreteStochVolVAR::save(const std::string fname) const
   m_var.rho().save(hdf5_name(fname, "DsvVAR/varRho", hdf5_opts::replace));
   m_var.sigma().save(hdf5_name(fname, "DsvVAR/varSigma", hdf5_opts::replace));
 
-  vec volAR = { m_vol.intercept(), m_vol.rho(), m_vol.sigma() };
+  vec volAR = {m_vol.intercept(), m_vol.rho(), m_vol.sigma()};
   volAR.save(
       hdf5_name(fname, "DsvVAR/volatilityAR1params", hdf5_opts::replace));
 }
@@ -493,4 +494,4 @@ void DiscreteStochVolVAR::print() const
 { /* TODO */
 }
 
-} // namespace TimeSeries
+}  // namespace TimeSeries
