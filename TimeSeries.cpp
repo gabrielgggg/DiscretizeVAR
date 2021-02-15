@@ -171,15 +171,14 @@ MarkovChain::MarkovChain(const AR process, const uword sz, const double pmMCsd,
 
 rowvec stationaryDistribution(const mat& transitionMatrix)
 {
-  rowvec stat;
   cx_vec eigval;
   cx_mat eigvec;
   // eig_gen(eigval, eigvec, m_tran.t(), "balance");
   eigs_gen(eigval, eigvec, sp_mat(transitionMatrix.t()), 1);
 
-  uword unitEigIx = (abs(abs(eigval) - 1.0)).index_min();
+  const uword unitEigIx = (abs(abs(eigval) - 1.0)).index_min();
 
-  stat = abs(eigvec.col(unitEigIx)).t();
+  const rowvec stat = abs(eigvec.col(unitEigIx)).t();
   return stat / sum(stat);
 }
 
@@ -377,7 +376,7 @@ void DiscreteStochVolVAR::impl(bool trimGrids)
   m_grids.set_size(m_flatSize, m_size + 1);
   umat m_map(m_flatSize, m_size + 1);
 
-  MarkovChain volMC(m_vol, m_volGridSize, pmSd, true);
+  const MarkovChain volMC(m_vol, m_volGridSize, pmSd, true);
   const rowvec& vols = volMC.support();
   const mat& volTran = volMC.transition();
 

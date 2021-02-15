@@ -6,12 +6,12 @@ tools = intel
 ifeq ($(tools),gnu)
   compiler = g++
   flags = -Ofast -fopenmp -pipe -flto -std=c++2a
-  fWarn = -Wall -pedantic -g
+  fWarn = -Wall -pedantic # -g
   libs = -larmadillo 
 else ifeq ($(tools),intel)
   compiler = icpc
   flags = -Ofast -parallel -align -xHost -qopenmp -std=c++20 -ipo
-  fWarn = -W -g -pedantic
+  fWarn = -W -pedantic # -g
   libs = -larmadillo -mkl
 else
   $(error Unknown toolchain?)
