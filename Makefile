@@ -5,12 +5,12 @@ tools = intel
 
 ifeq ($(tools),gnu)
   compiler = g++
-  flags = -Ofast -fopenmp -pipe -flto -std=c++2a
+  flags = -Ofast -fopenmp -pipe -flto -std=c++2a -march=native -mcpu=native
   fWarn = -Wall -pedantic # -g
   libs = -larmadillo 
 else ifeq ($(tools),intel)
   compiler = icpc
-  flags = -Ofast -parallel -align -xHost -qopenmp -std=c++20 -ipo
+  flags = -Ofast -parallel -align -march=native -mcpu=native -qopenmp -std=c++20 -ipo # -xHost 
   fWarn = -W -pedantic # -g
   libs = -larmadillo -mkl
 else
