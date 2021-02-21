@@ -21,11 +21,16 @@ struct MvNormal {
 /*
  * Normal helpers
  */
-DiscreteRV discretizeNormal(const double mean, const double sigma,
-                            const uword n_elem = 21,
-                            const double pmSigma = pmSd, bool cutTails = true);
-vec discretizeNormal(vec grid, const double mean, const double sigma,
-                     bool cutTails = true);
+DiscreteRV
+discretizeNormal(const double mean,
+    const double sigma,
+    const uword n_elem = 21,
+    const double pmSigma = pmSd,
+    bool cutTails = true);
+vec discretizeNormal(vec grid,
+    const double mean,
+    const double sigma,
+    bool cutTails = true);
 
 /*
  *
@@ -33,23 +38,46 @@ vec discretizeNormal(vec grid, const double mean, const double sigma,
  *
  */
 class AR {
- public:
-  double intercept() const { return m_intercept; }
-  double rho() const { return m_rho; }
-  double sigma() const { return m_sigma; }
-  double stationaryMean() const { return m_intercept / (1.0 - m_rho); }
-  double stationarySigma() const
+  public:
+  inline double
+  intercept() const
+  {
+    return m_intercept;
+  }
+  inline double
+  rho() const
+  {
+    return m_rho;
+  }
+  inline double
+  sigma() const
+  {
+    return m_sigma;
+  }
+  inline double
+  stationaryMean() const
+  {
+    return m_intercept / (1.0 - m_rho);
+  }
+  inline double
+  stationarySigma() const
   {
     return m_sigma / std::sqrt(1.0 - m_rho * m_rho);
   }
-  bool stationaryQ() const { return std::abs(m_rho) < 1.0; }
+  inline bool
+  stationaryQ() const
+  {
+    return std::abs(m_rho) < 1.0;
+  }
 
   AR(double intercept, double rho, double sigma)
-      : m_intercept(intercept), m_rho(rho), m_sigma(sigma)
+      : m_intercept(intercept)
+      , m_rho(rho)
+      , m_sigma(sigma)
   {
   }
 
- private:
+  private:
   double m_intercept;
   double m_rho;
   double m_sigma;
@@ -61,11 +89,27 @@ class AR {
  *
  */
 class VAR {
- public:
-  uword size() const { return m_size; }
-  const vec& intercept() const { return m_intercept; }
-  const mat& rho() const { return m_rho; }
-  const mat& sigma() const { return m_sigma; }
+  public:
+  inline uword
+  size() const
+  {
+    return m_size;
+  }
+  inline const vec&
+  intercept() const
+  {
+    return m_intercept;
+  }
+  inline const mat&
+  rho() const
+  {
+    return m_rho;
+  }
+  inline const mat&
+  sigma() const
+  {
+    return m_sigma;
+  }
 
   const MvNormal conditional(vec& current) const;
   vec& stationaryMean();
@@ -74,12 +118,14 @@ class VAR {
   void print();
 
   VAR(vec intercept, mat rho, mat sigma)
-      : m_intercept(intercept), m_rho(rho), m_sigma(sigma)
+      : m_intercept(intercept)
+      , m_rho(rho)
+      , m_sigma(sigma)
   {
     m_size = intercept.n_elem;
   }
 
- private:
+  private:
   uword m_size;
   vec m_intercept;
   mat m_rho;
@@ -97,19 +143,32 @@ class VAR {
  * Orthogonalized VAR(1) and "rotation" matirx
  *
  */
-enum OrthoMethod {  //
+enum OrthoMethod { //
   SVD,
   Cholesky
 };
 
 class OrthogonalizedVAR {
- public:
-  const VAR& getVAR() const { return m_ortho; }
-  const VAR& getOriginalVAR() const { return m_original; }
-  const mat& getSupportRotationMatrix() const { return LL; }
+  public:
+  inline const VAR&
+  getVAR() const
+  {
+    return m_ortho;
+  }
+  inline const VAR&
+  getOriginalVAR() const
+  {
+    return m_original;
+  }
+  inline const mat&
+  getSupportRotationMatrix() const
+  {
+    return LL;
+  }
 
   OrthogonalizedVAR(VAR original, OrthoMethod method = OrthoMethod::Cholesky)
-      : m_original(original), m_ortho(original)
+      : m_original(original)
+      , m_ortho(original)
   {
     const mat mEye = eye(original.size(), original.size());
     mat Atilde = original.intercept();
@@ -120,33 +179,33 @@ class OrthogonalizedVAR {
     LL = mEye;
 
     switch (method) {
-      case OrthoMethod::SVD: {
-        mat VV;
-        svd(LL, DD, VV, GG);
+    case OrthoMethod::SVD: {
+      mat VV;
+      svd(LL, DD, VV, GG);
 
-        Atilde = LL.t() * original.intercept();
-        Btilde = LL.t() * original.rho() * LL;
-        diagDD = diagmat(DD);
-        break;
-      }
-      case OrthoMethod::Cholesky: {
-        LL = chol(GG, "lower");
-        mat invLL = inv(LL);
+      Atilde = LL.t() * original.intercept();
+      Btilde = LL.t() * original.rho() * LL;
+      diagDD = diagmat(DD);
+      break;
+    }
+    case OrthoMethod::Cholesky: {
+      LL = chol(GG, "lower");
+      mat invLL = inv(LL);
 
-        Atilde = invLL * original.intercept();
-        Btilde = invLL * original.rho() * LL;
-        break;
-      }
-      default: {
-        cout << "Unknown method." << endl;
-        exit(1);
-      }
+      Atilde = invLL * original.intercept();
+      Btilde = invLL * original.rho() * LL;
+      break;
+    }
+    default: {
+      cout << "Unknown method." << endl;
+      exit(1);
+    }
     }
 
     m_ortho = VAR(Atilde, Btilde, diagDD);
   }
 
- private:
+  private:
   VAR m_original;
   VAR m_ortho;
   mat LL;
@@ -157,36 +216,61 @@ class OrthogonalizedVAR {
  * Markov Chain
  *
  */
-rowvec stationaryDistribution(const mat& transitionMatrix);
+rowvec
+stationaryDistribution(const mat& transitionMatrix);
 
-uvec simulateChain(const mat& transitionMatrix, const uword initState,
-                   const uword simSz);
+uvec simulateChain(const mat& transitionMatrix,
+    const uword initState,
+    const uword simSz);
 
 class MarkovChain {
- public:
-  uword size() const { return m_size; }
+  public:
+  inline uword
+  size() const
+  {
+    return m_size;
+  }
 
-  rowvec& support() { return m_support; }
-  const rowvec& support() const { return m_support; }
+  inline rowvec&
+  support()
+  {
+    return m_support;
+  }
+  inline const rowvec&
+  support() const
+  {
+    return m_support;
+  }
 
-  mat& transition() { return m_tran; }
-  const mat& transition() const { return m_tran; }
+  inline mat&
+  transition()
+  {
+    return m_tran;
+  }
+  inline const mat&
+  transition() const
+  {
+    return m_tran;
+  }
 
   void save(std::string fname) const;
   void print() const;
 
   const rowvec& stationary();
 
-  MarkovChain() {}
+  MarkovChain() { }
   MarkovChain(rowvec support, mat transition)
-      : m_support(support), m_tran(transition)
+      : m_support(support)
+      , m_tran(transition)
   {
     m_size = support.n_elem;
   }
-  MarkovChain(const AR process, const uword sz = 21, const double pmMCsd = pmSd,
-              bool expSupport = false);
+  MarkovChain(const AR process,
+      const uword sz = 21,
+      const double pmMCsd = pmSd,
+      bool expSupport = false);
 
- private:
+  private:
   uword m_size;
   rowvec m_support;
   rowvec m_stationary;
@@ -199,18 +283,44 @@ class MarkovChain {
  *
  */
 class DiscreteVAR {
- public:
-  uword size() const { return m_size; }
-  uword flatSize() const { return m_flatSize; }
-  uword midIx() const { return m_midIx; }
-  const vec grid(uword varIx) const { return m_grids.col(varIx); }
-  const rowvec gridValues(uword ix) const { return m_grids.row(ix); }
-  const mat transition() const { return m_tran; }
+  public:
+  inline uword
+  size() const
+  {
+    return m_size;
+  }
+  inline uword
+  flatSize() const
+  {
+    return m_flatSize;
+  }
+  inline uword
+  midIx() const
+  {
+    return m_midIx;
+  }
+  inline const vec
+  grid(uword varIx) const
+  {
+    return m_grids.col(varIx);
+  }
+  inline const rowvec
+  gridValues(uword ix) const
+  {
+    return m_grids.row(ix);
+  }
+  inline const mat
+  transition() const
+  {
+    return m_tran;
+  }
   void save(std::string fname) const;
   void print() const;
 
-  DiscreteVAR(const VAR var, const uword supportSize, bool trimGrids = true,
-              OrthoMethod mm = OrthoMethod::Cholesky)
+  DiscreteVAR(const VAR var,
+      const uword supportSize,
+      bool trimGrids = true,
+      OrthoMethod mm = OrthoMethod::Cholesky)
       : m_var(var)
   {
     m_supportSizes.set_size(m_var.size());
@@ -218,14 +328,17 @@ class DiscreteVAR {
     impl(trimGrids, mm);
   }
 
-  DiscreteVAR(const VAR var, const uvec gridSizes, bool trimGrids = true,
-              OrthoMethod mm = OrthoMethod::Cholesky)
-      : m_var(var), m_supportSizes(gridSizes)
+  DiscreteVAR(const VAR var,
+      const uvec gridSizes,
+      bool trimGrids = true,
+      OrthoMethod mm = OrthoMethod::Cholesky)
+      : m_var(var)
+      , m_supportSizes(gridSizes)
   {
     impl(trimGrids, mm);
   }
 
- private:
+  private:
   VAR m_var;
 
   uword m_size;
@@ -246,18 +359,45 @@ class DiscreteVAR {
  *
  */
 class DiscreteStochVolVAR {
- public:
-  uword size() const { return m_size; }
-  uword flatSize() const { return m_flatSize; }
-  uword midIx() const { return m_midIx; }
-  const mat transition() const { return m_tran; }
-  const vec grid(uword iIx) const { return m_grids.col(iIx); }
-  const rowvec gridValues(uword ix) const { return m_grids.row(ix); }
+  public:
+  inline uword
+  size() const
+  {
+    return m_size;
+  }
+  inline uword
+  flatSize() const
+  {
+    return m_flatSize;
+  }
+  inline uword
+  midIx() const
+  {
+    return m_midIx;
+  }
+  inline const mat
+  transition() const
+  {
+    return m_tran;
+  }
+  inline const vec
+  grid(uword iIx) const
+  {
+    return m_grids.col(iIx);
+  }
+  inline const rowvec
+  gridValues(uword ix) const
+  {
+    return m_grids.row(ix);
+  }
   void save(std::string fname) const;
   void print() const;
 
-  DiscreteStochVolVAR(const VAR var, const AR vol, const uvec gridSizes,
-                      const uword volGridSize, bool trimGrids = true)
+  DiscreteStochVolVAR(const VAR var,
+      const AR vol,
+      const uvec gridSizes,
+      const uword volGridSize,
+      bool trimGrids = true)
       : m_var(var)
       , m_vol(vol)
       , m_supportSizes(gridSizes)
@@ -266,7 +406,7 @@ class DiscreteStochVolVAR {
     impl(trimGrids);
   };
 
- private:
+  private:
   VAR m_var;
   AR m_vol;
 
@@ -284,4 +424,4 @@ class DiscreteStochVolVAR {
 
 void trimMarkovChain(mat& grids, mat& transition);
 
-}  // namespace TimeSeries
+} // namespace TimeSeries

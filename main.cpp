@@ -39,13 +39,13 @@ void discretizeVARexample()
   cout << "Discretize VAR example. Results saved in myMCvar.h5" << endl;
 
   // example 3d
-  vec icept = {0.0, 0.25, 1.0};
-  mat rho = {{0.97, 0.0, 0.0},  //
-             {0.0, 0.98, 0.0},  //
-             {0.0, 0.0, 0.3}};
-  mat sigma = {{0.03 * 0.03, -0.0005, 0.0},    //
-               {-0.0005, 0.025 * 0.025, 0.0},  //
-               {0.0, 0.0, 0.01}};
+  vec icept = { 0.0, 0.25, 1.0 };
+  mat rho = { { 0.97, 0.0, 0.0 }, //
+    { 0.0, 0.98, 0.0 }, //
+    { 0.0, 0.0, 0.3 } };
+  mat sigma = { { 0.03 * 0.03, -0.0005, 0.0 }, //
+    { -0.0005, 0.025 * 0.025, 0.0 }, //
+    { 0.0, 0.0, 0.01 } };
 
   // example 2d
   /*
@@ -66,7 +66,7 @@ void discretizeVARexample()
     return;
   }
 
-  uvec gridSizes = {11, 11, 11};
+  uvec gridSizes = { 15, 15, 15 };
   DiscreteVAR myMCvar(myVarN, gridSizes, true, OrthoMethod::Cholesky);
   myMCvar.save("myMCvar.h5");
 }
@@ -78,15 +78,15 @@ void discretizeStochasticVolVARexample()
 
   AR vol(0.0, 0.9, 0.05);
 
-  vec icept = {0.0, 0.0};
-  mat rho = {{0.9, 0.0},  //
-             {0.0, 0.9}};
-  mat sigma = {{0.015 * 0.015, -0.3 * 0.015 * 0.015},  //
-               {-0.3 * 0.015 * 0.015, 0.015 * 0.015}};
+  vec icept = { 0.0, 0.0 };
+  mat rho = { { 0.9, 0.0 }, //
+    { 0.0, 0.9 } };
+  mat sigma = { { 0.015 * 0.015, -0.3 * 0.015 * 0.015 }, //
+    { -0.3 * 0.015 * 0.015, 0.015 * 0.015 } };
   VAR atMeanVolVAR(icept, rho, sigma);
 
-  uvec gridSizes = {11, 11};
-  uword volGridSize = 9;
+  uvec gridSizes = { 15, 15 };
+  uword volGridSize = 15;
   DiscreteStochVolVAR volVAR(atMeanVolVAR, vol, gridSizes, volGridSize, true);
   volVAR.save("stochVol.h5");
 }
