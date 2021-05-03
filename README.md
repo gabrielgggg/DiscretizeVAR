@@ -4,6 +4,7 @@ e.g. "volatility regime," like baseline Bansal-Yaron process. Allows the elimina
 Uses the Armadillo library for C++, with HDF5 support for I-O.
 
 Looking instead for a MATLAB library? Consider [the code repository](https://github.com/alexisakira/discretization) for *"Discretizing Nonlinear, Non-Gaussian Markov 
-Processes with Exact Conditional Moments"* by Leland E. Farmer &amp; Alexis Akira Toda, in [QE](https://onlinelibrary.wiley.com/doi/abs/10.3982/QE737).
+Processes with Exact Conditional Moments"* by Leland E. Farmer &amp; Alexis Akira Toda, in [QE](https://onlinelibrary.wiley.com/doi/abs/10.3982/QE737), or the refinement
+of [Grey Gordon's](https://sites.google.com/site/greygordon/research) *"Efficient VAR Discretization"* in [EL](https://www.sciencedirect.com/science/article/abs/pii/S016517652100149X).
 
 ![Example plot](example_2d.png)
