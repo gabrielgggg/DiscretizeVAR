@@ -5,14 +5,14 @@ tools = intel
 
 ifeq ($(tools),gnu)
   compiler = g++
-  flags = -Ofast -fopenmp -pipe -flto -std=c++2a -march=native -mcpu=native
+  flags = -Ofast -fopenmp -pipe -flto -std=c++2a -march=native -mcpu=native # -ggdb
   fWarn = -Wall -Wextra -pedantic
   libs = -larmadillo 
 else ifeq ($(tools),intel)
   compiler = icpc
-  flags = -Ofast -parallel -align -march=native -mcpu=native -qopenmp -std=c++20 
+  flags = -Ofast -parallel -align -march=native -mcpu=native -qopenmp -std=c++20 # -ggdb 
   fWarn = -pedantic -w2 -wd383,1419,1599,11074,11076 
-  libs = -larmadillo -mkl
+  libs = -larmadillo -qmkl
 else
   $(error Unknown toolchain?)
 endif
